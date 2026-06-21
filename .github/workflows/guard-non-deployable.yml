@@ -29,8 +29,18 @@ jobs:
             fail=1
           fi
 
-          if [ -d apps ] || [ -d src ]; then
-            echo "::error::apps/ or src/ directory found — this repo is meant to stay metadata-only"
+          if [ -d apps ]; then
+            echo "::error::apps/ directory found — this repo is meant to stay metadata-only"
+            fail=1
+          fi
+
+          if [ -d dist ]; then
+            echo "::error::dist/ build output found — this repo is meant to stay metadata-only"
+            fail=1
+          fi
+
+          if compgen -G "vite.config.*" > /dev/null || compgen -G "next.config.*" > /dev/null; then
+            echo "::error::a build tool config (vite/next) was found — this repo is meant to stay metadata-only"
             fail=1
           fi
 
