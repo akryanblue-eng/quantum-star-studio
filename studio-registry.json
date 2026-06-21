@@ -1,13 +1,15 @@
 {
   "studio_name": "Quantum Star LLC",
   "owner": "akryanblue-eng",
+  "repoType": "registry",
+  "deployable": false,
   "active_projects": [
-    {"name": "arch-rivals-street", "repo": "https://github.com/akryanblue-eng/arch-rivals-street", "type": "Game (C#)"},
-    {"name": "chicago-chase", "repo": "https://github.com/akryanblue-eng/chicago-chase", "type": "Game (C#)"},
-    {"name": "drill-raq-city", "repo": "https://github.com/akryanblue-eng/drill-raq-city", "type": "Game (C#)"},
-    {"name": "beat-mania-engine", "repo": "https://github.com/akryanblue-eng/beat-mania-engine", "type": "Engine (C#)"},
-    {"name": "quantum-star-os", "repo": "https://github.com/akryanblue-eng/quantum-star-os", "type": "OS (Python)"},
-    {"name": "godly-dna", "repo": "https://github.com/akryanblue-eng/godly-dna", "type": "AI Core (Python)"}
+    {"name": "arch-rivals-street", "repo": "https://github.com/akryanblue-eng/arch-rivals-street", "type": "Game (C#)", "layer": "surface", "deployTarget": null},
+    {"name": "chicago-chase", "repo": "https://github.com/akryanblue-eng/chicago-chase", "type": "Game (C#)", "layer": "surface", "deployTarget": null},
+    {"name": "drill-raq-city", "repo": "https://github.com/akryanblue-eng/drill-raq-city", "type": "Game (C#)", "layer": "engine", "deployTarget": null},
+    {"name": "beat-mania-engine", "repo": "https://github.com/akryanblue-eng/beat-mania-engine", "type": "Engine (C#)", "layer": "engine", "deployTarget": null},
+    {"name": "quantum-star-os", "repo": "https://github.com/akryanblue-eng/quantum-star-os", "type": "OS (Python)", "layer": "engine", "deployTarget": null},
+    {"name": "godly-dna", "repo": "https://github.com/akryanblue-eng/godly-dna", "type": "AI Core (Python)", "layer": "engine", "deployTarget": null}
   ],
-  "last_updated": "2026-06-17T07:10:24Z"
+  "last_updated": "2026-06-21T00:00:00Z"
 }

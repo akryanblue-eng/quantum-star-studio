@@ -1,0 +1,37 @@
+name: Guard non-deployable registry
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  no-deploy-artifacts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fail if deploy configuration appears in this registry repo
+        run: |
+          fail=0
+
+          if [ -f package.json ]; then
+            echo "::error::package.json found — this repo is marked deployable: false in repo.type.json"
+            fail=1
+          fi
+
+          if [ -f vercel.json ]; then
+            echo "::error::vercel.json found — this repo is marked deployable: false in repo.type.json"
+            fail=1
+          fi
+
+          if find .github/workflows -maxdepth 1 -iname '*vercel*' | grep -q .; then
+            echo "::error::a vercel-related workflow was found — this repo is marked deployable: false in repo.type.json"
+            fail=1
+          fi
+
+          if [ -d apps ]; then
+            echo "::error::apps/ directory found — this repo is meant to stay a pure registry"
+            fail=1
+          fi
+
+          exit $fail
