@@ -1,15 +1,16 @@
 {
+  "schema": "quantum-star.studio-registry.v1",
   "studio_name": "Quantum Star LLC",
   "owner": "akryanblue-eng",
   "repoType": "registry",
   "deployable": false,
-  "active_projects": [
-    {"name": "arch-rivals-street", "repo": "https://github.com/akryanblue-eng/arch-rivals-street", "type": "Game (C#)", "layer": "surface", "deployTarget": null},
-    {"name": "chicago-chase", "repo": "https://github.com/akryanblue-eng/chicago-chase", "type": "Game (C#)", "layer": "surface", "deployTarget": null},
-    {"name": "drill-raq-city", "repo": "https://github.com/akryanblue-eng/drill-raq-city", "type": "Game (C#)", "layer": "engine", "deployTarget": null},
-    {"name": "beat-mania-engine", "repo": "https://github.com/akryanblue-eng/beat-mania-engine", "type": "Engine (C#)", "layer": "engine", "deployTarget": null},
-    {"name": "quantum-star-os", "repo": "https://github.com/akryanblue-eng/quantum-star-os", "type": "OS (Python)", "layer": "engine", "deployTarget": null},
-    {"name": "godly-dna", "repo": "https://github.com/akryanblue-eng/godly-dna", "type": "AI Core (Python)", "layer": "engine", "deployTarget": null}
+  "repos": [
+    {"name": "arch-rivals-street", "repo": "https://github.com/akryanblue-eng/arch-rivals-street", "kind": "game", "language": "csharp", "layer": "surface", "deployable": false, "deploy": null},
+    {"name": "chicago-chase", "repo": "https://github.com/akryanblue-eng/chicago-chase", "kind": "game", "language": "csharp", "layer": "surface", "deployable": false, "deploy": null},
+    {"name": "drill-raq-city", "repo": "https://github.com/akryanblue-eng/drill-raq-city", "kind": "game", "language": "csharp", "layer": "engine", "deployable": false, "deploy": null},
+    {"name": "beat-mania-engine", "repo": "https://github.com/akryanblue-eng/beat-mania-engine", "kind": "engine", "language": "csharp", "layer": "engine", "deployable": false, "deploy": null},
+    {"name": "quantum-star-os", "repo": "https://github.com/akryanblue-eng/quantum-star-os", "kind": "os", "language": "python", "layer": "engine", "deployable": false, "deploy": null},
+    {"name": "godly-dna", "repo": "https://github.com/akryanblue-eng/godly-dna", "kind": "ai-core", "language": "python", "layer": "engine", "deployable": false, "deploy": null}
   ],
   "last_updated": "2026-06-21T00:00:00Z"
 }

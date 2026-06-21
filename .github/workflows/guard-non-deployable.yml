@@ -29,8 +29,8 @@ jobs:
             fail=1
           fi
 
-          if [ -d apps ]; then
-            echo "::error::apps/ directory found — this repo is meant to stay a pure registry"
+          if [ -d apps ] || [ -d src ]; then
+            echo "::error::apps/ or src/ directory found — this repo is meant to stay metadata-only"
             fail=1
           fi
 

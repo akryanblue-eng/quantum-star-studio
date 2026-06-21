@@ -1,5 +1,9 @@
 {
   "repoType": "registry",
   "name": "quantum-star-studio",
-  "deployable": false
+  "deployable": false,
+  "enforcement": {
+    "allowVercel": false,
+    "allowBuild": false
+  }
 }
