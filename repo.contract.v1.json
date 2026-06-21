@@ -1,0 +1,19 @@
+{
+  "schema": "repo.contract.v1",
+  "id": "quantum-star-studio",
+  "plane": "registry",
+  "deployable": false,
+  "runtime": {
+    "type": "none",
+    "entry": null
+  },
+  "forbidden": [
+    "package.json",
+    "vercel.json",
+    ".github/workflows/vercel*",
+    "dist",
+    "apps",
+    "vite.config.*",
+    "next.config.*"
+  ]
+}

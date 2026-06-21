@@ -5,43 +5,14 @@ on:
   pull_request:
 
 jobs:
-  no-deploy-artifacts:
+  contract-verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Fail if deploy configuration appears in this registry repo
-        run: |
-          fail=0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
 
-          if [ -f package.json ]; then
-            echo "::error::package.json found — this repo is marked deployable: false in repo.type.json"
-            fail=1
-          fi
-
-          if [ -f vercel.json ]; then
-            echo "::error::vercel.json found — this repo is marked deployable: false in repo.type.json"
-            fail=1
-          fi
-
-          if find .github/workflows -maxdepth 1 -iname '*vercel*' | grep -q .; then
-            echo "::error::a vercel-related workflow was found — this repo is marked deployable: false in repo.type.json"
-            fail=1
-          fi
-
-          if [ -d apps ]; then
-            echo "::error::apps/ directory found — this repo is meant to stay metadata-only"
-            fail=1
-          fi
-
-          if [ -d dist ]; then
-            echo "::error::dist/ build output found — this repo is meant to stay metadata-only"
-            fail=1
-          fi
-
-          if compgen -G "vite.config.*" > /dev/null || compgen -G "next.config.*" > /dev/null; then
-            echo "::error::a build tool config (vite/next) was found — this repo is meant to stay metadata-only"
-            fail=1
-          fi
-
-          exit $fail
+      - name: Verify repo.contract.v1.json
+        run: node scripts/contract-verify.js
