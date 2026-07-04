@@ -46,7 +46,11 @@ const CODE_EXTENSIONS = [
 
 const failures = [];
 const warnings = [];
-const fail = (code, node, msg) => failures.push({ code, node, msg });
+// repair = { expected, actual, fix } — every failure must state not just
+// what is wrong, but what state was expected and the minimal change that
+// resolves the drift.
+const fail = (code, node, msg, repair) =>
+  failures.push({ code, node, msg, repair });
 const warn = (code, node, msg) => warnings.push({ code, node, msg });
 
 async function gh(path) {
@@ -107,8 +111,14 @@ async function checkProject(project) {
     fail(
       "MISSING_NODE",
       id,
-      `repo ${loc.owner}/${loc.repo} not found (404). If it is private, ` +
-        "set the RDD_TOKEN secret to a PAT that can read it."
+      `repo ${loc.owner}/${loc.repo} not found (404)`,
+      {
+        expected: `${loc.owner}/${loc.repo} exists and is readable`,
+        actual: "GitHub reports the repo does not exist (or token cannot see it)",
+        fix:
+          "create the repo, remove this registry entry, or set RDD_TOKEN " +
+          "to a PAT that can read it if the repo is private",
+      }
     );
     return;
   }
@@ -116,8 +126,12 @@ async function checkProject(project) {
     fail(
       "UNVERIFIABLE_NODE",
       id,
-      `GitHub API returned ${repoRes.status} for ${loc.owner}/${loc.repo}; ` +
-        "cannot prove this node exists"
+      `GitHub API returned ${repoRes.status} for ${loc.owner}/${loc.repo}`,
+      {
+        expected: "GitHub API confirms the repo exists (HTTP 200)",
+        actual: `HTTP ${repoRes.status} — existence cannot be proven`,
+        fix: "check token permissions / API rate limits and re-run",
+      }
     );
     return;
   }
@@ -128,7 +142,16 @@ async function checkProject(project) {
     `/repos/${loc.owner}/${loc.repo}/git/trees/${branch}?recursive=1`
   );
   if (treeRes.status !== 200) {
-    fail("GHOST_NODE", id, `default branch ${branch} has no readable tree (empty repo?)`);
+    fail(
+      "GHOST_NODE",
+      id,
+      `default branch ${branch} has no readable tree (empty repo?)`,
+      {
+        expected: `a populated default branch implementing "${project.type}"`,
+        actual: "repo exists but its default branch has no file tree",
+        fix: `push an initial implementation to ${loc.owner}/${loc.repo} or remove the registry entry`,
+      }
+    );
     return;
   }
   const files = treeRes.body.tree
@@ -138,11 +161,19 @@ async function checkProject(project) {
     CODE_EXTENSIONS.some((ext) => f.endsWith(ext))
   );
   if (codeFiles.length === 0) {
+    const lang = declaredLanguage(project.type) ?? "code";
     fail(
       "GHOST_NODE",
       id,
       `declared as "${project.type}" but contains no code ` +
-        `(${files.length} file(s), all metadata/config)`
+        `(${files.length} file(s), all metadata/config)`,
+      {
+        expected: `repo contains ${lang} sources implementing "${project.type}"`,
+        actual: `${files.length} file(s), none are code`,
+        fix:
+          `initialize a ${lang} scaffold with a real entrypoint in ` +
+          `${loc.owner}/${loc.repo}, or mark this registry entry as planned/inactive`,
+      }
     );
     return;
   }
@@ -160,7 +191,14 @@ async function checkProject(project) {
         "ROLE_MISMATCH",
         id,
         `declared "${project.type}" but no ${lang} signature files found ` +
-          `(looked for ${sigs.join(", ")})`
+          `(looked for ${sigs.join(", ")})`,
+        {
+          expected: `${lang} signature files (${sigs.join(", ")}) present`,
+          actual: `${codeFiles.length} code file(s) found, none matching ${lang}`,
+          fix:
+            "correct the declared type in the registry to match the actual " +
+            "implementation, or port the implementation to the declared language",
+        }
       );
     }
   } else if (lang) {
@@ -175,7 +213,14 @@ function report(registry) {
   console.log(OFFLINE ? "mode: offline (schema only)\n" : "mode: full reality check\n");
 
   for (const w of warnings) console.log(`⚠️  [${w.code}] ${w.node}: ${w.msg}`);
-  for (const f of failures) console.log(`❌ [${f.code}] ${f.node}: ${f.msg}`);
+  for (const f of failures) {
+    console.log(`❌ [${f.code}] ${f.node}: ${f.msg}`);
+    if (f.repair) {
+      console.log(`   EXPECTED_STATE: ${f.repair.expected}`);
+      console.log(`   ACTUAL_STATE:   ${f.repair.actual}`);
+      console.log(`   MINIMAL_FIX:    ${f.repair.fix}`);
+    }
+  }
 
   if (failures.length > 0) {
     console.log(`\n❌ REGISTRY DRIFT DETECTED — ${failures.length} violation(s).`);

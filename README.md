@@ -8,7 +8,9 @@ It contains **no runtime logic** by design.
 
 - `studio-registry.json` — declarative map of active projects
   (name, repo, type). Read-only at runtime; never a runtime dependency.
-- `scripts/rdd.js` — Registry Drift Detector (RDD v1.0).
+- `scripts/rdd.js` — Registry Drift Detector (RDD v1.1). Every failure
+  reports `EXPECTED_STATE` / `ACTUAL_STATE` / `MINIMAL_FIX`, so a red run
+  states not just what drifted but the smallest change that resolves it.
 - `.github/workflows/registry-drift.yml` — CI gate that runs RDD on every
   push/PR and weekly on a schedule.
 
