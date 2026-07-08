@@ -1,0 +1,27 @@
+name: Registry Drift Detector
+
+on:
+  push:
+  pull_request:
+  schedule:
+    # Reality can drift without a push to this repo (a declared repo gets
+    # deleted or emptied), so re-verify weekly.
+    - cron: "0 6 * * 1"
+
+jobs:
+  drift-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Run Registry Drift Detector
+        # RDD_TOKEN must be a PAT with read access to every repo declared in
+        # studio-registry.json — the default GITHUB_TOKEN can only see this
+        # repo, so private sibling repos would falsely report MISSING_NODE
+        # without it. For an all-public registry, no secret is needed.
+        env:
+          RDD_TOKEN: ${{ secrets.RDD_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/rdd.js
