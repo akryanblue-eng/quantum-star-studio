@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QSTS Browser Telemetry Harness v1</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface2: #1c2128;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent: #58a6ff;
+      --success: #3fb950;
+      --warn: #d29922;
+      --danger: #f85149;
+      --mono: 'Consolas', 'Courier New', monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, 'Segoe UI', system-ui, sans-serif;
+      font-size: 14px;
+      min-height: 100vh;
+      padding: 32px 24px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    h1 { font-size: 22px; font-weight: 600; margin-bottom: 4px; }
+    .subtitle { font-size: 13px; color: var(--muted); margin-bottom: 12px; }
+    h3 {
+      font-size: 11px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--muted); margin-bottom: 12px;
+    }
+    .schema-badge {
+      display: inline-block;
+      font-family: var(--mono); font-size: 11px;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 4px; padding: 2px 8px; color: var(--accent);
+      margin-bottom: 24px;
+    }
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: 20px; margin-bottom: 16px;
+    }
+    label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+    input[type="text"] {
+      width: 100%; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--text); padding: 8px 12px;
+      font-size: 14px; outline: none;
+    }
+    input[type="text"]:focus { border-color: var(--accent); }
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 16px; border-radius: 6px; border: none;
+      font-size: 14px; font-weight: 500; cursor: pointer; transition: opacity 0.15s;
+    }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-primary { background: #238636; color: #fff; }
+    .btn-primary:not(:disabled):hover { background: #2ea043; }
+    .btn-secondary {
+      background: var(--surface2); color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:not(:disabled):hover { background: var(--border); }
+    .btn-group { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+    #status-bar {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 14px; background: var(--surface2);
+      border: 1px solid var(--border); border-radius: 8px;
+      margin-bottom: 10px; font-family: var(--mono); font-size: 13px;
+    }
+    .status-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--muted); flex-shrink: 0;
+    }
+    .status-dot.idle       { background: var(--muted); }
+    .status-dot.calibrating { background: var(--warn); animation: pulse 0.8s infinite; }
+    .status-dot.running    { background: var(--accent); animation: pulse 1s infinite; }
+    .status-dot.done       { background: var(--success); }
+    .status-dot.error      { background: var(--danger); }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.25; }
+    }
+    .progress-track {
+      height: 3px; background: var(--border);
+      border-radius: 2px; margin-bottom: 16px; overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%; background: var(--accent);
+      border-radius: 2px; width: 0%; transition: width 0.35s;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    th {
+      text-align: left; color: var(--muted); font-weight: 500;
+      padding: 5px 10px; border-bottom: 1px solid var(--border);
+      font-family: -apple-system, 'Segoe UI', system-ui, sans-serif;
+      font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
+    }
+    td { padding: 7px 10px; border-bottom: 1px solid var(--border); font-family: var(--mono); font-size: 12px; }
+    tr:last-child td { border-bottom: none; }
+    tr.pending td { color: var(--muted); }
+    tr.running td { color: var(--accent); }
+    tr.ok td { color: var(--text); }
+    tr.timeout td { color: var(--danger); }
+    tr.error td { color: var(--danger); }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 10px;
+    }
+    .stat-item {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 6px; padding: 12px;
+    }
+    .stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+    .stat-value { font-family: var(--mono); font-size: 18px; font-weight: 600; color: var(--accent); }
+    .stat-unit { font-size: 10px; color: var(--muted); margin-top: 1px; }
+    .info-grid {
+      display: grid; grid-template-columns: max-content 1fr;
+      gap: 5px 16px; font-size: 12px;
+    }
+    .info-key { color: var(--muted); font-family: var(--mono); }
+    .info-val { font-family: var(--mono); color: var(--text); }
+    #json-preview {
+      background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+      padding: 14px; font-family: var(--mono); font-size: 11px;
+      overflow-x: auto; white-space: pre; max-height: 420px; overflow-y: auto;
+      color: var(--text); margin-top: 14px;
+    }
+    .warn-box {
+      background: rgba(210,153,34,.10); border: 1px solid rgba(210,153,34,.40);
+      border-radius: 6px; padding: 12px 14px; font-size: 13px;
+      color: var(--warn); margin-bottom: 16px; display: none;
+    }
+    code { font-family: var(--mono); font-size: 12px; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <h1>QSTS Browser Telemetry Harness</h1>
+  <p class="subtitle">Quantum Star · Speaker-to-microphone round-trip latency measurement</p>
+  <span class="schema-badge">quantumstar.qsts.browser-telemetry.v1</span>
+
+  <div class="warn-box" id="https-warn">
+    ⚠ Microphone access requires a secure context.
+    Serve from <code>localhost</code> or an HTTPS host (e.g. GitHub Pages, Vercel).
+    <br>Run locally: <code>python3 -m http.server 4173</code>
+    then open <code>http://localhost:4173/qsts-telemetry-harness.html</code>
+  </div>
+
+  <div class="card">
+    <h3>Configuration</h3>
+    <label for="route-input">
+      Output route — describe the audio path
+      (e.g. "built-in speakers → internal mic", "3.5 mm loopback cable")
+    </label>
+    <input type="text" id="route-input" placeholder="built-in speakers → internal mic" />
+    <div class="btn-group">
+      <button class="btn btn-primary" id="run-btn">▶ Run 10 Trials + Export</button>
+      <button class="btn btn-secondary" id="abort-btn" disabled>■ Abort</button>
+    </div>
+  </div>
+
+  <div id="status-bar">
+    <span class="status-dot idle" id="status-dot"></span>
+    <span id="status-text">Idle — press Run 10 Trials to begin</span>
+  </div>
+  <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+
+  <div class="card" id="trials-card">
+    <h3>Trials</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Latency (ms)</th>
+          <th>Tone start frame</th>
+          <th>Detected frame</th>
+          <th>Method</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="trials-body"></tbody>
+    </table>
+  </div>
+
+  <div class="card" id="stats-card" style="display:none">
+    <h3>Statistics — <span id="stats-count">0</span> valid trials</h3>
+    <div class="stats-grid">
+      <div class="stat-item">
+        <div class="stat-label">Median</div>
+        <div class="stat-value" id="s-median">—</div>
+        <div class="stat-unit">ms</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">p05</div>
+        <div class="stat-value" id="s-p05">—</div>
+        <div class="stat-unit">ms</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">p95</div>
+        <div class="stat-value" id="s-p95">—</div>
+        <div class="stat-unit">ms</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">Jitter (p95−p05)</div>
+        <div class="stat-value" id="s-jitter">—</div>
+        <div class="stat-unit">ms</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">MAD</div>
+        <div class="stat-value" id="s-mad">—</div>
+        <div class="stat-unit">ms</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">Std Dev</div>
+        <div class="stat-value" id="s-std">—</div>
+        <div class="stat-unit">ms</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="context-card" style="display:none">
+    <h3>Capture Context</h3>
+    <div class="info-grid" id="context-grid"></div>
+  </div>
+
+  <div class="card" id="json-section" style="display:none">
+    <h3>Export JSON</h3>
+    <div class="btn-group" style="margin-top:0">
+      <button class="btn btn-secondary" id="copy-btn">📋 Copy JSON</button>
+      <button class="btn btn-secondary" id="download-btn">⬇ Download JSON</button>
+    </div>
+    <pre id="json-preview"></pre>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+/* ─── AudioWorklet detector (inlined as Blob URL) ──────────────────────────── */
+const WORKLET_CODE = `
+class QstsDetectorProcessor extends AudioWorkletProcessor {
+  constructor () {
+    super();
+    this._armed         = false;
+    this._threshold     = 0.02;
+    this._toneStartFrame = 0;
+    this.port.onmessage = ({ data }) => {
+      if (data.type === 'arm') {
+        this._threshold      = data.threshold;
+        this._toneStartFrame = data.toneStartFrame;
+        this._armed          = true;
+      } else if (data.type === 'disarm') {
+        this._armed = false;
+      }
+    };
+  }
+  process (inputs) {
+    if (!this._armed) return true;
+    const ch = inputs[0] && inputs[0][0];
+    if (!ch) return true;
+    for (let i = 0; i < ch.length; i++) {
+      if (Math.abs(ch[i]) > this._threshold) {
+        this.port.postMessage({
+          type:            'detected',
+          detectedFrame:   currentFrame + i,
+          toneStartFrame:  this._toneStartFrame
+        });
+        this._armed = false;
+        return true;
+      }
+    }
+    return true;
+  }
+}
+registerProcessor('qsts-detector', QstsDetectorProcessor);
+`;
+
+/* ─── Statistics ───────────────────────────────────────────────────────────── */
+function pct (sorted, p) {
+  if (sorted.length === 0) return 0;
+  const idx = (p / 100) * (sorted.length - 1);
+  const lo  = Math.floor(idx), hi = Math.ceil(idx);
+  return sorted[lo] + (sorted[hi] - sorted[lo]) * (idx - lo);
+}
+
+function computeStats (values) {
+  if (!values || values.length === 0) return null;
+  const s    = [...values].sort((a, b) => a - b);
+  const n    = s.length;
+  const median = pct(s, 50);
+  const p05    = pct(s, 5);
+  const p95    = pct(s, 95);
+  const jitter = p95 - p05;
+  const sortedDevs = s.map(v => Math.abs(v - median)).sort((a, b) => a - b);
+  const mad    = pct(sortedDevs, 50);
+  const mean   = s.reduce((a, b) => a + b, 0) / n;
+  const stdDev = Math.sqrt(s.reduce((a, v) => a + (v - mean) ** 2, 0) / n);
+  return { count: n, median, p05, p95, jitter, mad, stdDev, mean };
+}
+
+/* ─── Browser / OS sniff ───────────────────────────────────────────────────── */
+function detectBrowser () {
+  const ua = navigator.userAgent;
+  if (/Edg\//.test(ua))                         return 'Edge';
+  if (/OPR\/|Opera/.test(ua))                   return 'Opera';
+  if (/Chrome\//.test(ua))                      return 'Chrome';
+  if (/Safari\//.test(ua) && !/Chrome/.test(ua)) return 'Safari';
+  if (/Firefox\//.test(ua))                     return 'Firefox';
+  return 'Unknown';
+}
+
+function detectOS () {
+  const ua = navigator.userAgent;
+  if (/Windows/.test(ua))     return 'Windows';
+  if (/Android/.test(ua))     return 'Android';
+  if (/iPhone|iPad/.test(ua)) return 'iOS';
+  if (/Mac OS X/.test(ua))    return 'macOS';
+  if (/Linux/.test(ua))       return 'Linux';
+  return 'Unknown';
+}
+
+/* ─── UI helpers ───────────────────────────────────────────────────────────── */
+function setStatus (state, text) {
+  document.getElementById('status-dot').className  = 'status-dot ' + state;
+  document.getElementById('status-text').textContent = text;
+}
+
+function setProgress (n, total) {
+  document.getElementById('progress-fill').style.width = `${(n / total) * 100}%`;
+}
+
+function initTrialRows (n) {
+  const tbody = document.getElementById('trials-body');
+  tbody.innerHTML = '';
+  for (let i = 0; i < n; i++) {
+    const tr = document.createElement('tr');
+    tr.className   = 'pending';
+    tr.dataset.index = i;
+    tr.innerHTML = `
+      <td>${i + 1}</td>
+      <td class="td-lat">—</td>
+      <td class="td-sf">—</td>
+      <td class="td-df">—</td>
+      <td class="td-method">—</td>
+      <td class="td-status">pending</td>`;
+    tbody.appendChild(tr);
+  }
+}
+
+function updateTrialRow (index, d) {
+  const tr = document.querySelector(`#trials-body tr[data-index="${index}"]`);
+  if (!tr) return;
+  if (d.cls     !== undefined) tr.className = d.cls;
+  if (d.latMs   !== undefined) tr.querySelector('.td-lat').textContent    = d.latMs.toFixed(2);
+  if (d.sf      !== undefined) tr.querySelector('.td-sf').textContent     = d.sf;
+  if (d.df      !== undefined) tr.querySelector('.td-df').textContent     = d.df;
+  if (d.method  !== undefined) tr.querySelector('.td-method').textContent = d.method;
+  if (d.status  !== undefined) tr.querySelector('.td-status').textContent = d.status;
+}
+
+function renderStats (stats) {
+  if (!stats) return;
+  const ms2 = v => (v * 1000).toFixed(2);
+  document.getElementById('s-median').textContent = ms2(stats.median);
+  document.getElementById('s-p05').textContent    = ms2(stats.p05);
+  document.getElementById('s-p95').textContent    = ms2(stats.p95);
+  document.getElementById('s-jitter').textContent = ms2(stats.jitter);
+  document.getElementById('s-mad').textContent    = ms2(stats.mad);
+  document.getElementById('s-std').textContent    = ms2(stats.stdDev);
+  document.getElementById('stats-count').textContent = stats.count;
+  document.getElementById('stats-card').style.display = '';
+}
+
+function renderContext (c) {
+  const ms2 = v => (v * 1000).toFixed(3) + ' ms';
+  const rows = [
+    ['browser',          c.browser],
+    ['os',               c.os],
+    ['sampleRate',       c.sampleRate + ' Hz'],
+    ['baseLatency',      ms2(c.baseLatency)],
+    ['outputLatency',    ms2(c.outputLatency)],
+    ['route',            c.route || '(not set)'],
+    ['ambientRMS',       (c.ambientRMS * 1e3).toFixed(4) + ' m-FS'],
+    ['ambientPeak',      (c.ambientPeak * 1e3).toFixed(4) + ' m-FS'],
+    ['detectionThreshold', (c.threshold * 1e3).toFixed(4) + ' m-FS'],
+    ['detectionMethod',  c.detectionMethod],
+    ['echoCancellation', 'false'],
+    ['noiseSuppression', 'false'],
+    ['autoGainControl',  'false'],
+  ];
+  const grid = document.getElementById('context-grid');
+  grid.innerHTML = rows
+    .map(([k, v]) => `<span class="info-key">${k}</span><span class="info-val">${v}</span>`)
+    .join('');
+  document.getElementById('context-card').style.display = '';
+}
+
+/* ─── Tone buffer (1 kHz sine, 80 ms, with short fade) ────────────────────── */
+function makeToneBuffer (ctx, freqHz = 1000, durSec = 0.08, amp = 0.75) {
+  const n    = Math.ceil(ctx.sampleRate * durSec);
+  const buf  = ctx.createBuffer(1, n, ctx.sampleRate);
+  const ch   = buf.getChannelData(0);
+  const fade = Math.min(64, Math.floor(n * 0.08));
+  for (let i = 0; i < n; i++) {
+    let env = 1;
+    if      (i < fade)     env = i / fade;
+    else if (i >= n - fade) env = (n - i) / fade;
+    ch[i] = amp * env * Math.sin(2 * Math.PI * freqHz * i / ctx.sampleRate);
+  }
+  return buf;
+}
+
+/* ─── Analyser-based fallback detector ────────────────────────────────────── */
+function armAnalyserDetector (ctx, analyser, threshold, toneStartTime, timeoutMs) {
+  return new Promise((resolve, reject) => {
+    const buf  = new Float32Array(analyser.fftSize);
+    let   done = false;
+    const armAt = toneStartTime - 0.025; // begin polling 25 ms before scheduled tone
+
+    const to = setTimeout(() => {
+      if (!done) { done = true; reject(new Error('timeout')); }
+    }, timeoutMs);
+
+    function check () {
+      if (done) return;
+      if (ctx.currentTime < armAt) { requestAnimationFrame(check); return; }
+      analyser.getFloatTimeDomainData(buf);
+      let peak = 0;
+      for (let i = 0; i < buf.length; i++) {
+        const a = Math.abs(buf[i]);
+        if (a > peak) peak = a;
+      }
+      if (peak > threshold) {
+        done = true;
+        clearTimeout(to);
+        resolve({ detectedTime: ctx.currentTime, via: 'Analyser' });
+      } else {
+        requestAnimationFrame(check);
+      }
+    }
+    requestAnimationFrame(check);
+  });
+}
+
+/* ─── Telemetry harness ────────────────────────────────────────────────────── */
+class QstsTelemetryHarness {
+  constructor () {
+    this._ctx             = null;
+    this._micStream       = null;
+    this._micSource       = null;
+    this._workletNode     = null;
+    this._workletOk       = false;
+    this._analyserFallback = null;
+    this._toneBuffer      = null;
+    this._threshold       = 0.02;
+    this._ambientRMS      = 0;
+    this._ambientPeak     = 0;
+    this._aborted         = false;
+    this._results         = [];
+    this._captureCtx      = null;
+    this._epochStart      = null;
+    this._epochEnd        = null;
+    this._sourcesCreated  = 0;
+    this._pendingDetect   = null; // { resolve, reject, to }
+  }
+
+  /* initialise AudioContext + microphone */
+  async init () {
+    this._epochStart = Date.now();
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    this._ctx = new AudioCtx();
+    if (this._ctx.state === 'suspended') await this._ctx.resume();
+
+    this._micStream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl:  false,
+        channelCount:     1,
+      }
+    });
+    this._micSource = this._ctx.createMediaStreamSource(this._micStream);
+
+    /* attempt AudioWorklet */
+    if (this._ctx.audioWorklet) {
+      try {
+        const blob = new Blob([WORKLET_CODE], { type: 'application/javascript' });
+        const url  = URL.createObjectURL(blob);
+        await this._ctx.audioWorklet.addModule(url);
+        URL.revokeObjectURL(url);
+
+        this._workletNode = new AudioWorkletNode(this._ctx, 'qsts-detector');
+        this._workletNode.port.onmessage = ({ data }) => {
+          if (data.type === 'detected' && this._pendingDetect) {
+            const pd = this._pendingDetect;
+            this._pendingDetect = null;
+            clearTimeout(pd.to);
+            pd.resolve(data);
+          }
+        };
+        this._workletNode.port.start();
+        this._micSource.connect(this._workletNode);
+        this._workletOk = true;
+      } catch (e) {
+        console.warn('[QSTS] AudioWorklet unavailable, using Analyser fallback:', e.message);
+      }
+    }
+
+    /* fallback analyser */
+    if (!this._workletOk) {
+      this._analyserFallback = this._ctx.createAnalyser();
+      this._analyserFallback.fftSize = 512;
+      this._micSource.connect(this._analyserFallback);
+    }
+
+    this._toneBuffer = makeToneBuffer(this._ctx);
+  }
+
+  /* measure ambient noise, set adaptive detection threshold */
+  async calibrate () {
+    setStatus('calibrating', 'Calibrating ambient noise level…');
+    const analyser = this._ctx.createAnalyser();
+    analyser.fftSize = 2048;
+    this._micSource.connect(analyser);
+    const bufData = new Float32Array(analyser.fftSize);
+    const rmsSamples = [];
+
+    await new Promise(res => {
+      const iv = setInterval(() => {
+        analyser.getFloatTimeDomainData(bufData);
+        let sumSq = 0;
+        for (let i = 0; i < bufData.length; i++) sumSq += bufData[i] * bufData[i];
+        rmsSamples.push(Math.sqrt(sumSq / bufData.length));
+      }, 50);
+      setTimeout(() => { clearInterval(iv); res(); }, 600);
+    });
+
+    try { this._micSource.disconnect(analyser); } catch (_) {}
+
+    const rms  = rmsSamples.length ? rmsSamples.reduce((a, b) => a + b, 0) / rmsSamples.length : 0;
+    const peak = rmsSamples.length ? Math.max(...rmsSamples) : 0;
+
+    /* threshold = peak × 4, floor at 0.015 (-36 dBFS) */
+    const threshold = Math.max(peak * 4, 0.015);
+    this._threshold  = threshold;
+    this._ambientRMS  = rms;
+    this._ambientPeak = peak;
+    return { rms, peak, threshold };
+  }
+
+  /* run a single speaker-to-microphone trial */
+  async _runTrial (index) {
+    updateTrialRow(index, { cls: 'running', status: 'running…' });
+    const ctx = this._ctx;
+    const sr  = ctx.sampleRate;
+
+    /* schedule tone 150 ms in the future */
+    const scheduleDelay  = 0.15;
+    const toneStartTime  = ctx.currentTime + scheduleDelay;
+    const toneStartFrame = Math.round(toneStartTime * sr);
+    const method         = this._workletOk ? 'AudioWorklet' : 'Analyser';
+    const trialTimeout   = 3500;
+
+    /* arm detector */
+    let detectPromise;
+    if (this._workletOk) {
+      detectPromise = new Promise((resolve, reject) => {
+        const to = setTimeout(() => {
+          if (this._pendingDetect) { this._pendingDetect = null; }
+          this._workletNode.port.postMessage({ type: 'disarm' });
+          reject(new Error('timeout'));
+        }, trialTimeout);
+        this._pendingDetect = { resolve, reject, to };
+        this._workletNode.port.postMessage({
+          type:           'arm',
+          threshold:      this._threshold,
+          toneStartFrame
+        });
+      });
+    } else {
+      detectPromise = armAnalyserDetector(
+        ctx, this._analyserFallback, this._threshold, toneStartTime, trialTimeout
+      );
+    }
+
+    /* play tone */
+    const source = ctx.createBufferSource();
+    source.buffer = this._toneBuffer;
+    source.connect(ctx.destination);
+    source.start(toneStartTime);
+    source.stop(toneStartTime + this._toneBuffer.duration + 0.1);
+    this._sourcesCreated++;
+
+    try {
+      const det = await detectPromise;
+      try { source.disconnect(); } catch (_) {}
+
+      let latencySeconds, detectedFrame;
+      if (det.via === undefined || det.detectedFrame !== undefined) {
+        /* AudioWorklet path */
+        detectedFrame  = det.detectedFrame;
+        latencySeconds = (det.detectedFrame - toneStartFrame) / sr;
+      } else {
+        /* Analyser path */
+        detectedFrame  = Math.round(det.detectedTime * sr);
+        latencySeconds = det.detectedTime - toneStartTime;
+      }
+
+      /* plausibility guard: 1 ms – 2.5 s */
+      if (latencySeconds < 0.001 || latencySeconds > 2.5) {
+        throw new Error(`implausible: ${(latencySeconds * 1000).toFixed(1)} ms`);
+      }
+
+      updateTrialRow(index, {
+        cls: 'ok', latMs: latencySeconds * 1000,
+        sf: toneStartFrame, df: detectedFrame,
+        method, status: 'ok'
+      });
+      return { index, status: 'ok', latencySeconds, toneStartFrame, detectedFrame, detectionMethod: method };
+
+    } catch (err) {
+      try { source.disconnect(); } catch (_) {}
+      const s = err.message === 'timeout' ? 'timeout' : 'error';
+      updateTrialRow(index, { cls: s, method, status: s === 'timeout' ? 'timeout' : err.message });
+      return {
+        index, status: s, latencySeconds: null,
+        toneStartFrame, detectedFrame: null,
+        detectionMethod: method,
+        error: err.message
+      };
+    }
+  }
+
+  /* run all 10 trials */
+  async runAllTrials (n = 10) {
+    this._results = [];
+    this._aborted = false;
+    for (let i = 0; i < n; i++) {
+      if (this._aborted) break;
+      setStatus('running', `Running trial ${i + 1} of ${n}…`);
+      setProgress(i, n);
+      const r = await this._runTrial(i);
+      this._results.push(r);
+      if (i < n - 1 && !this._aborted) {
+        await new Promise(res => setTimeout(res, 1200));
+      }
+    }
+    setProgress(n, n);
+    return this._results;
+  }
+
+  abort () {
+    this._aborted = true;
+    if (this._pendingDetect) {
+      const pd = this._pendingDetect;
+      this._pendingDetect = null;
+      clearTimeout(pd.to);
+      pd.reject(new Error('aborted'));
+    }
+    if (this._workletNode) {
+      try { this._workletNode.port.postMessage({ type: 'disarm' }); } catch (_) {}
+    }
+  }
+
+  /* release all audio resources */
+  async cleanup () {
+    this._epochEnd = Date.now();
+    if (this._workletNode) {
+      try { this._workletNode.disconnect(); } catch (_) {}
+      this._workletNode = null;
+    }
+    if (this._analyserFallback) {
+      try { this._analyserFallback.disconnect(); } catch (_) {}
+      this._analyserFallback = null;
+    }
+    if (this._micSource) {
+      try { this._micSource.disconnect(); } catch (_) {}
+      this._micSource = null;
+    }
+    if (this._micStream) {
+      this._micStream.getTracks().forEach(t => t.stop());
+      this._micStream = null;
+    }
+    if (this._ctx) {
+      try { await this._ctx.close(); } catch (_) {}
+      this._ctx = null;
+    }
+  }
+
+  /* build the schema-compliant export object */
+  buildExportJSON () {
+    const valid    = this._results.filter(r => r.latencySeconds !== null);
+    const stats    = computeStats(valid.map(r => r.latencySeconds));
+    const cc       = this._captureCtx || {};
+
+    return {
+      $schema:     'quantumstar.qsts.browser-telemetry.v1',
+      capturedAt:  new Date().toISOString(),
+      browser:     cc.browser     || detectBrowser(),
+      os:          cc.os          || detectOS(),
+      sampleRate:  cc.sampleRate  || null,
+      baseLatency: cc.baseLatency !== undefined ? cc.baseLatency : null,
+      outputLatency: cc.outputLatency !== undefined ? cc.outputLatency : null,
+      route:       cc.route || document.getElementById('route-input').value.trim() || null,
+      captureSettings: {
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl:  false,
+      },
+      ambientNoise: {
+        rmsFS:              this._ambientRMS,
+        peakFS:             this._ambientPeak,
+        detectionThreshold: this._threshold,
+      },
+      detectionMethod: this._workletOk ? 'AudioWorklet' : 'Analyser',
+      epochProbe: {
+        startedAt:       this._epochStart ? new Date(this._epochStart).toISOString() : null,
+        endedAt:         this._epochEnd   ? new Date(this._epochEnd).toISOString()   : null,
+        durationMs:      (this._epochStart && this._epochEnd)
+                           ? this._epochEnd - this._epochStart : null,
+        sourcesCreated:  this._sourcesCreated,
+      },
+      trials: this._results.map(r => {
+        const t = {
+          index:           r.index,
+          latencySeconds:  r.latencySeconds,
+          toneStartFrame:  r.toneStartFrame,
+          detectedFrame:   r.detectedFrame,
+          detectionMethod: r.detectionMethod,
+          status:          r.status,
+        };
+        if (r.error) t.error = r.error;
+        return t;
+      }),
+      statistics: stats ? {
+        count:          stats.count,
+        medianSeconds:  stats.median,
+        p05Seconds:     stats.p05,
+        p95Seconds:     stats.p95,
+        jitterSeconds:  stats.jitter,
+        madSeconds:     stats.mad,
+        stdDevSeconds:  stats.stdDev,
+        meanSeconds:    stats.mean,
+      } : null,
+      deviceOutputCorrectionSeconds: null,
+    };
+  }
+}
+
+/* ─── Clipboard helper (graceful degradation) ──────────────────────────────── */
+async function copyText (text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+  /* execCommand fallback */
+  const ta = Object.assign(document.createElement('textarea'), {
+    value: text,
+    style: 'position:fixed;opacity:0;top:0;left:0',
+  });
+  document.body.appendChild(ta);
+  ta.select();
+  document.execCommand('copy');
+  document.body.removeChild(ta);
+}
+
+/* ─── Application state ────────────────────────────────────────────────────── */
+let harness    = null;
+let exportData = null;
+
+/* ─── Run button ───────────────────────────────────────────────────────────── */
+document.getElementById('run-btn').addEventListener('click', async () => {
+  const runBtn   = document.getElementById('run-btn');
+  const abortBtn = document.getElementById('abort-btn');
+  const TRIAL_N  = 10;
+
+  runBtn.disabled   = true;
+  abortBtn.disabled = false;
+  exportData        = null;
+  ['json-section', 'stats-card', 'context-card'].forEach(id => {
+    document.getElementById(id).style.display = 'none';
+  });
+  initTrialRows(TRIAL_N);
+  setProgress(0, TRIAL_N);
+
+  if (harness) { try { await harness.cleanup(); } catch (_) {} }
+  harness = new QstsTelemetryHarness();
+
+  try {
+    setStatus('running', 'Requesting microphone access…');
+    await harness.init();
+
+    /* snapshot AudioContext metadata */
+    const ctx = harness._ctx;
+    harness._captureCtx = {
+      browser:       detectBrowser(),
+      os:            detectOS(),
+      sampleRate:    ctx.sampleRate,
+      baseLatency:   ctx.baseLatency  || 0,
+      outputLatency: ctx.outputLatency || 0,
+      route:         document.getElementById('route-input').value.trim(),
+    };
+
+    const { rms, peak, threshold } = await harness.calibrate();
+    renderContext({
+      ...harness._captureCtx,
+      ambientRMS:      rms,
+      ambientPeak:     peak,
+      threshold,
+      detectionMethod: harness._workletOk ? 'AudioWorklet' : 'Analyser',
+    });
+
+    await harness.runAllTrials(TRIAL_N);
+
+    exportData = harness.buildExportJSON();
+    const valid = harness._results.filter(r => r.latencySeconds !== null);
+
+    if (valid.length > 0) {
+      renderStats(computeStats(valid.map(r => r.latencySeconds)));
+      setStatus('done', `Complete — ${valid.length}/${TRIAL_N} trials captured`);
+    } else {
+      setStatus('error', 'No valid trials — check microphone placement and that echo cancellation is off');
+    }
+
+    document.getElementById('json-preview').textContent = JSON.stringify(exportData, null, 2);
+    document.getElementById('json-section').style.display = '';
+
+  } catch (err) {
+    const msg = (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError')
+      ? 'Microphone permission denied'
+      : 'Error: ' + err.message;
+    setStatus('error', msg);
+    console.error('[QSTS]', err);
+  } finally {
+    runBtn.disabled   = false;
+    abortBtn.disabled = true;
+    try { await harness.cleanup(); } catch (_) {}
+  }
+});
+
+/* ─── Abort button ─────────────────────────────────────────────────────────── */
+document.getElementById('abort-btn').addEventListener('click', () => {
+  if (harness) harness.abort();
+  setStatus('idle', 'Aborted');
+  document.getElementById('run-btn').disabled   = false;
+  document.getElementById('abort-btn').disabled = true;
+});
+
+/* ─── Copy JSON ─────────────────────────────────────────────────────────────── */
+document.getElementById('copy-btn').addEventListener('click', async () => {
+  if (!exportData) return;
+  try {
+    await copyText(JSON.stringify(exportData, null, 2));
+    const btn = document.getElementById('copy-btn');
+    const orig = btn.textContent;
+    btn.textContent = '✓ Copied!';
+    setTimeout(() => { btn.textContent = orig; }, 2000);
+  } catch (e) {
+    alert('Copy failed: ' + e.message);
+  }
+});
+
+/* ─── Download JSON ─────────────────────────────────────────────────────────── */
+document.getElementById('download-btn').addEventListener('click', () => {
+  if (!exportData) return;
+  const ts       = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  const filename = `qsts-telemetry-${ts}.json`;
+  const blob     = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+  const url      = URL.createObjectURL(blob);
+  const a        = Object.assign(document.createElement('a'), { href: url, download: filename });
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+});
+
+/* ─── Startup checks ─────────────────────────────────────────────────────────── */
+(function startup () {
+  if (!window.isSecureContext) {
+    document.getElementById('https-warn').style.display = '';
+    document.getElementById('run-btn').disabled = true;
+    setStatus('error', 'Insecure context — microphone unavailable');
+    return;
+  }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    setStatus('error', 'getUserMedia not supported in this browser');
+    document.getElementById('run-btn').disabled = true;
+  }
+}());
+</script>
+</body>
+</html>
